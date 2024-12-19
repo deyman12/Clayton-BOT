@@ -70,15 +70,29 @@ class Clayton {
 
       const response = await axios.get(`${this.baseUrl}/assets/${jsFile}`);
       const jsContent = response.data;
-
-      const match = jsContent.match(/_ge="([^"]+)"/);
-      if (!match?.[1]) throw new Error("API Base ID pattern not found");
-
-      this.apiBaseId = match[1];
-      logger.info(
-        `${colors.green}API Base ID fetched: ${colors.bright}${this.apiBaseId}${colors.reset}`
+      let varBaseID = jsContent.match(
+        new RegExp(`${this.baseUrl}/api/\\$\\{([a-zA-Z0-9_]+)\\}`)
       );
-      return true;
+      if (varBaseID) {
+        varBaseID = varBaseID[1];
+        logger.info(
+          `${colors.yellow}Found API Base ID Location: ${colors.bright}${varBaseID}${colors.reset}`
+        );
+        let realBaseID = jsContent.match(
+          new RegExp(`const\\s+${varBaseID}\\s*=\\s*["'\`](.*?)["'\`]`)
+        );
+        if (realBaseID) {
+          this.apiBaseId = realBaseID[1];
+          logger.info(
+            `${colors.green}API Base ID fetched: ${colors.bright}${this.apiBaseId}${colors.reset}`
+          );
+          return true;
+        } else {
+          throw new Error("API Base ID pattern not found");
+        }
+      } else {
+        throw new Error("API Base ID variabel Location not found!");
+      }
     } catch (error) {
       logger.error(
         `${colors.red}API Base ID fetch failed: ${error.message}${colors.reset}`
